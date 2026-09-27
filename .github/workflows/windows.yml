@@ -1,0 +1,62 @@
+name: Windows
+on:
+  push:
+    branches: [main, windows]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (x64 and x86)
+        shell: pwsh
+        run: |
+          cmake -S windows -B build/win-msvc/x64 -A x64 -DPYAW_SUFFIX=64
+          cmake --build build/win-msvc/x64 --config Release
+          cmake -S windows -B build/win-msvc/x86 -A Win32 -DPYAW_SUFFIX=32
+          cmake --build build/win-msvc/x86 --config Release --target pyaw
+
+      - name: Get the model from the latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo ${{ github.repository }} --pattern "Pyaw-*-macOS.zip" --dir dl
+          Expand-Archive (Get-ChildItem dl/*.zip).FullName -DestinationPath dl
+          New-Item -ItemType Directory -Force windows/installer/model | Out-Null
+          Copy-Item dl/Pyaw.app/Contents/Resources/model.bin, dl/Pyaw.app/Contents/Resources/lexicon.tsv windows/installer/model/
+
+      - name: Engine tests
+        shell: pwsh
+        run: |
+          build/win-msvc/x64/Release/engine_tests.exe windows/installer/model
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          build/win-msvc/x64/Release/pyaw_cli.exe --model windows/installer/model --eval data/eval/chat_style.tsv | Select-Object -Last 1
+
+      - name: Typing test (registers the DLL and types into a text box)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Copy-Item windows/installer/model/* build/win-msvc/x64/Release/
+          regsvr32 /s build/win-msvc/x64/Release/pyaw64.dll
+          if ($LASTEXITCODE -ne 0) { Write-Host "regsvr32 failed: $LASTEXITCODE"; exit 1 }
+          build/win-msvc/x64/Release/typing_test.exe
+          $code = $LASTEXITCODE
+          regsvr32 /s /u build/win-msvc/x64/Release/pyaw64.dll
+          exit $code
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc windows/installer/pyaw.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pyaw-Windows-Setup
+          path: windows/installer/Output/*.exe

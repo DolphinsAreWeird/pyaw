@@ -5,3 +5,6 @@ data/clean/
 *.xcodeproj
 .DS_Store
 dist/
+.tools/
+windows/installer/model/
+windows/installer/Output/

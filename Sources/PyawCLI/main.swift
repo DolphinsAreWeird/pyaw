@@ -52,7 +52,51 @@ func stripSpaces(_ s: String) -> String {
     BurmeseText.normalize(s).filter { !$0.isWhitespace && !"။၊.,?!".contains($0) }
 }
 
-if let i = args.firstIndex(of: "--phrases") {
+if args.contains("--dump") {
+    // Machine-readable output for comparing engine implementations (see cpp/tools/pyaw_cli.cpp).
+    while let line = readLine() {
+        if line.isEmpty { continue }
+        let r = engine.decode(line)
+        let segs = r.segments.indices.map { k in engine.candidates(for: k, in: r, limit: 5).map(\.text).joined(separator: ",") }
+        let phrases = engine.phraseOptions(line).map(\.text)
+        print("\(line)\t\(r.text)\t\(segs.joined(separator: " | "))\t\(phrases.joined(separator: ","))")
+    }
+} else if let i = args.firstIndex(of: "--gen"), i + 2 < args.count {
+    // Test inputs: real Burmese runs from a cleaned corpus, romanized with random typical spellings.
+    //   --gen CORPUS.txt COUNT [SEED]
+    var rng: UInt64 = i + 3 < args.count ? UInt64(args[i + 3]) ?? 1 : 1
+    func next() -> UInt64 {
+        rng &+= 0x9E37_79B9_7F4A_7C15
+        var z = rng
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
+    }
+    func uniform() -> Double { Double(next() >> 11) / Double(1 << 53) }
+    let handle = FileHandle(forReadingAtPath: args[i + 1])!
+    let text = String(decoding: handle.readData(ofLength: 30 << 20), as: UTF8.self)
+    let lines = text.split(separator: "\n").map { $0.split(separator: " ").map(String.init) }.filter { !$0.isEmpty }
+    let count = Int(args[i + 2]) ?? 1000
+    var made = 0
+    while made < count {
+        let line = lines[Int(next() % UInt64(lines.count))]
+        let len = min(line.count, 1 + Int(next() % 5))
+        let start = Int(next() % UInt64(line.count - len + 1))
+        var out = ""
+        var ok = true
+        for (k, syl) in line[start..<(start + len)].enumerated() {
+            let vs = Romanizer.variants(of: syl)
+            if vs.isEmpty { ok = false; break }
+            let weights = vs.map { exp(-Double($0.cost)) }
+            var pick = uniform() * weights.reduce(0, +)
+            var chosen = vs[0].text
+            for (v, w) in zip(vs, weights) { pick -= w; if pick <= 0 { chosen = v.text; break } }
+            if k > 0 && uniform() < 0.65 { out += " " }
+            out += chosen
+        }
+        if ok { print(out); made += 1 }
+    }
+} else if let i = args.firstIndex(of: "--phrases") {
     for input in args[(i + 1)...] {
         let t0 = Date()
         let options = engine.phraseOptions(input)
