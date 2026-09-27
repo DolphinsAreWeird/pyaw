@@ -1,0 +1,7 @@
+.build/
+build/
+data/raw/
+data/clean/
+*.xcodeproj
+.DS_Store
+dist/

@@ -1,0 +1,14 @@
+name: Bug report
+description: Something else is broken (installing, the candidate window, keys…)
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: macOS version, Mac type (Apple Silicon / Intel), Pyaw version

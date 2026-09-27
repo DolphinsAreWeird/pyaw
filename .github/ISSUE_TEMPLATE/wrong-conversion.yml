@@ -1,0 +1,35 @@
+name: Wrong conversion · မှားနေတဲ့ စကားလုံး
+description: Pyaw turned your Myanglish into the wrong Burmese
+labels: ["conversion"]
+body:
+  - type: input
+    id: typed
+    attributes:
+      label: What you typed (Myanglish) · ရိုက်ခဲ့တာ
+      placeholder: br lote ny ll
+    validations:
+      required: true
+  - type: input
+    id: got
+    attributes:
+      label: What Pyaw gave · ထွက်လာတာ
+      placeholder: ဘာလုပ်နေလယ်
+  - type: input
+    id: expected
+    attributes:
+      label: What you expected · လိုချင်တာ
+      placeholder: ဘာလုပ်နေလဲ
+    validations:
+      required: true
+  - type: dropdown
+    id: offered
+    attributes:
+      label: Was the right one in the list (1–9 or Tab)?
+      options:
+        - "Yes, it was in the list"
+        - "No, it wasn't offered"
+        - "I didn't check"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else? (the app you were typing in, Pyaw version)

@@ -1,0 +1,11 @@
+# Community word list for Pyaw — add words people type that Pyaw gets wrong.
+# One per line: what you type <TAB> the Burmese [<TAB> cost, optional: lower = stronger, default 0.3]
+# Spaces in the Myanglish are ignored, so "kya naw" and "kyanaw" are the same entry.
+# Only add spellings real people use; test with:  .build/release/pyaw-cli "your phrase"
+tgi	တောင်ကြီး
+taunggyi	တောင်ကြီး
+bgo	ပဲခူး
+bago	ပဲခူး
+mlm	မော်လမြိုင်
+mawlamyine	မော်လမြိုင်
+lashio	လားရှိုး
