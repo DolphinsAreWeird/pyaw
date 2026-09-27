@@ -46,7 +46,10 @@ jobs:
           $reg = Start-Process regsvr32 -ArgumentList "/s", "`"$dll`"" -Wait -PassThru
           Write-Host "regsvr32 exit code: $($reg.ExitCode)"
           if ($reg.ExitCode -ne 0) { exit 1 }
-          Get-ChildItem "HKLM:\SOFTWARE\Microsoft\CTF\TIP\{E05EC474-487B-4788-AD78-D238B56D2833}" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 6 | ForEach-Object { $_.Name }
+          Get-ChildItem "HKLM:\SOFTWARE\Microsoft\CTF\TIP\{E05EC474-487B-4788-AD78-D238B56D2833}\LanguageProfile" -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }
+          # What the installer's "add to my keyboards" task does.
+          powershell -NoProfile -ExecutionPolicy Bypass -File windows/installer/keyboard.ps1 add
+          Get-WinUserLanguageList | Format-List LanguageTag, InputMethodTips | Out-String | Write-Host
           build/win-msvc/x64/Release/typing_test.exe
           $code = $LASTEXITCODE
           Start-Process regsvr32 -ArgumentList "/s", "/u", "`"$dll`"" -Wait | Out-Null
