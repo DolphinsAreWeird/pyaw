@@ -41,11 +41,15 @@ jobs:
         continue-on-error: true
         run: |
           Copy-Item windows/installer/model/* build/win-msvc/x64/Release/
-          regsvr32 /s build/win-msvc/x64/Release/pyaw64.dll
-          if ($LASTEXITCODE -ne 0) { Write-Host "regsvr32 failed: $LASTEXITCODE"; exit 1 }
+          $dll = (Resolve-Path build/win-msvc/x64/Release/pyaw64.dll).Path
+          # regsvr32 is a GUI program: wait for it explicitly to get its exit code.
+          $reg = Start-Process regsvr32 -ArgumentList "/s", "`"$dll`"" -Wait -PassThru
+          Write-Host "regsvr32 exit code: $($reg.ExitCode)"
+          if ($reg.ExitCode -ne 0) { exit 1 }
+          Get-ChildItem "HKLM:\SOFTWARE\Microsoft\CTF\TIP\{E05EC474-487B-4788-AD78-D238B56D2833}" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 6 | ForEach-Object { $_.Name }
           build/win-msvc/x64/Release/typing_test.exe
           $code = $LASTEXITCODE
-          regsvr32 /s /u build/win-msvc/x64/Release/pyaw64.dll
+          Start-Process regsvr32 -ArgumentList "/s", "/u", "`"$dll`"" -Wait | Out-Null
           exit $code
 
       - name: Build installer
