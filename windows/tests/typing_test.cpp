@@ -127,12 +127,29 @@ int main() {
     HRESULT hr = CoCreateInstance(CLSID_TF_InputProcessorProfiles, nullptr, CLSCTX_INPROC_SERVER,
                                   IID_ITfInputProcessorProfileMgr, reinterpret_cast<void**>(&mgr));
     if (SUCCEEDED(hr) && mgr) {
+        TF_INPUTPROCESSORPROFILE info = {};
+        HRESULT got = mgr->GetProfile(TF_PROFILETYPE_INPUTPROCESSOR, 0x0455, kClsid, kProfile, nullptr, &info);
+        std::printf("GetProfile: 0x%08lX (flags 0x%lX, hkl %p)\n", static_cast<unsigned long>(got),
+                    static_cast<unsigned long>(info.dwFlags), static_cast<void*>(info.hkl));
         hr = mgr->ActivateProfile(TF_PROFILETYPE_INPUTPROCESSOR, 0x0455, kClsid, kProfile, nullptr,
                                   TF_IPPMF_FORPROCESS | TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE);
+        std::printf("ActivateProfile: 0x%08lX\n", static_cast<unsigned long>(hr));
         mgr->Release();
     }
-    std::printf("ActivateProfile: 0x%08lX, foreground ok: %d\n", static_cast<unsigned long>(hr),
-                GetForegroundWindow() == main);
+    if (FAILED(hr)) {
+        // Older API: enable for this user, switch the thread's language, activate.
+        ITfInputProcessorProfiles* old = nullptr;
+        if (SUCCEEDED(CoCreateInstance(CLSID_TF_InputProcessorProfiles, nullptr, CLSCTX_INPROC_SERVER,
+                                       IID_ITfInputProcessorProfiles, reinterpret_cast<void**>(&old))) && old) {
+            HRESULT e = old->EnableLanguageProfile(kClsid, 0x0455, kProfile, TRUE);
+            HRESULT c = old->ChangeCurrentLanguage(0x0455);
+            hr = old->ActivateLanguageProfile(kClsid, 0x0455, kProfile);
+            std::printf("EnableLanguageProfile 0x%08lX, ChangeCurrentLanguage 0x%08lX, ActivateLanguageProfile 0x%08lX\n",
+                        static_cast<unsigned long>(e), static_cast<unsigned long>(c), static_cast<unsigned long>(hr));
+            old->Release();
+        }
+    }
+    std::printf("foreground ok: %d\n", GetForegroundWindow() == main);
     std::fflush(stdout);
     if (FAILED(hr)) return 2;
     SetFocus(g_edit);
