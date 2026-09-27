@@ -38,7 +38,6 @@ jobs:
 
       - name: Typing test (registers the DLL and types into a text box)
         shell: pwsh
-        continue-on-error: true
         run: |
           Copy-Item windows/installer/model/* build/win-msvc/x64/Release/
           $dll = (Resolve-Path build/win-msvc/x64/Release/pyaw64.dll).Path
